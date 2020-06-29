@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: #025677;
+  color: #fff;
+}
+.container {
+  padding: 30px;
+  text-align: center;
+}
+button {
+	padding: 12px;
+	font-size: 6rem;
+}
+.big{
+	width: 90%;
+	padding: 20px;
+}
+#qrcode{
+	margin: auto;
+	position: relative;
+	text-align: center;
+	width: 500px;
+}
+</style>
+<script src="buidl.js"></script>
+<script type="text/javascript" src="bitcoin.js"></script>
+<script type="text/javascript" src="hd.js"></script>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="qrcode.js"></script>
+</head>
+<body>
+<div class="container">
+  <div id="access-container">
+    <button type="button" id="start-button">Start Microphone</button>
+	<button type="button" id="stop-button">Stop Microphone</button>
+  </div>
+  <br><br>
+  <div id="button-container">
+	<button class="big" style="background-color: blue; color: white;">Check Balance</button><br><br>
+	<button class="big" style="background-color: green; color: white;">Get Address or Receive</button><br><br>
+	<button class="big" style="background-color: red; color: white;">Send Bitcoin</button><br><br>
+	<button class="big" style="background-color: gold; color: black;">History</button><br><br>
+	<button class="big" style="background-color: violet; color: white;">Back-Up</button><br><br>
+  </div>
+  <div id="qrcode"></div>
+</div>
+<script>
+const accessContainer = document.querySelector("#access-container");
+
+
+// The speech recognition interface lives on the browser’s window object
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition; // if none exists -> undefined
+
+if(SpeechRecognition) {
+  console.log("Your Browser supports speech Recognition");
+  
+  const recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  // recognition.lang = "en-US";
+  
+
+  const micBtn = accessContainer.querySelector("#start-button");
+  
+  micBtn.addEventListener("click", micBtnClick);
+  function micBtnClick() {
+    
+      recognition.start(); // First time you have to allow access to mic!
+    
+    
+  }
+  
+  const stopMicBtn = accessContainer.querySelector("#stop-button");
+  
+  stopMicBtn.addEventListener("click", stopMic);
+  function stopMic() {
+    
+      recognition.stop(); // First time you have to allow access to mic!
+    
+    
+  }
+
+  recognition.addEventListener("start", startSpeechRecognition); // <=> recognition.onstart = function() {...}
+  function startSpeechRecognition() {
+    
+    console.log("Voice activated, SPEAK");
+  }
+
+  recognition.addEventListener("end", endSpeechRecognition); // <=> recognition.onend = function() {...}
+  function endSpeechRecognition() {
+    
+    console.log("Speech recognition service disconnected");
+  }
+
+  recognition.addEventListener("result", resultOfSpeechRecognition); // <=> recognition.onresult = function(event) {...} - Fires when you stop talking
+  function resultOfSpeechRecognition(event) {
+    const current = event.resultIndex;
+    const transcript = event.results[current][0].transcript;
+    
+    if(transcript.toLowerCase().trim()==="stop recording") {
+      recognition.stop();
+    } else if(transcript.toLowerCase().trim()==="new address") {
+		
+		document.getElementById("button-container").innerHTML = "";
+		var segwitAddr = loadHDWallet();
+		new QRCode(document.getElementById("qrcode"), segwitAddr);
+		document.getElementById("button-container").innerHTML += "<br>"+segwitAddr;
+		console.log(segwitAddr);
+    }
+      else if(transcript.toLowerCase().trim()==="back up") {
+        backUp();
+    } else if(transcript.toLowerCase().trim()==="backup") {
+        backUp();
+    }
+      else {
+        console.log(transcript)
+    }
+    
+    
+  }
+  
+  
+}
+else {
+  console.log("Your Browser does not support speech Recognition");
+ 
+}
+
+function newHDWallet(){
+			var mnemonic = hd.bip39.generateMnemonic();
+			var seed = hd.bip39.mnemonicToSeed(mnemonic);
+    		var root = b.bitcoin.HDNode.fromSeedBuffer(seed)
+			
+			window.localStorage.setItem("seedwords", mnemonic);
+			
+    		//var wallet = root.derivePath("m/44'/0'/0'/0/"+i);
+    
+    		//legacy
+    		/*var address = wallet.getAddress();
+    		var wif = wallet.keyPair.toWIF();
+			var pubKey0 = wallet.keyPair.getPublicKeyBuffer();
+			var pubKeyHash0 = b.bitcoin.crypto.hash160(pubKey0);
+			var redeemScript0 = b.bitcoin.script.witnessPubKeyHash.output.encode(pubKeyHash0);
+			var redeemScriptHash0 = b.bitcoin.crypto.hash160(redeemScript0);
+			var scriptPubKey0 = b.bitcoin.script.scriptHash.output.encode(redeemScriptHash0);
+			var p2shsegwit0 = b.bitcoin.address.fromOutputScript(scriptPubKey0);
+			
+			
+			var wallet2 = root.derivePath("m/49'/0'/0'/0/"+i);
+			var wif2 = wallet2.keyPair.toWIF();
+			
+			//segwit p2sh
+			var pubKey = wallet2.keyPair.getPublicKeyBuffer();
+			var pubKeyHash = b.bitcoin.crypto.hash160(pubKey);
+			var redeemScript = b.bitcoin.script.witnessPubKeyHash.output.encode(pubKeyHash);
+			var redeemScriptHash = b.bitcoin.crypto.hash160(redeemScript);
+			var scriptPubKey2 = b.bitcoin.script.scriptHash.output.encode(redeemScriptHash);
+			var p2shsegwit = b.bitcoin.address.fromOutputScript(scriptPubKey2);
+			*/	
+			
+}
+
+function loadHDWallet(){
+	var mnemonic = window.localStorage.getItem("seedwords");
+	var seed = hd.bip39.mnemonicToSeed(mnemonic);
+	var root = b.bitcoin.HDNode.fromSeedBuffer(seed)
+	
+	window.localStorage.setItem("seedwords", mnemonic);
+	
+	//var wallet = root.derivePath("m/44'/0'/0'/0/"+i);
+
+	//legacy
+	/*var address = wallet.getAddress();
+	var wif = wallet.keyPair.toWIF();
+	var pubKey0 = wallet.keyPair.getPublicKeyBuffer();
+	var pubKeyHash0 = b.bitcoin.crypto.hash160(pubKey0);
+	var redeemScript0 = b.bitcoin.script.witnessPubKeyHash.output.encode(pubKeyHash0);
+	var redeemScriptHash0 = b.bitcoin.crypto.hash160(redeemScript0);
+	var scriptPubKey0 = b.bitcoin.script.scriptHash.output.encode(redeemScriptHash0);
+	var p2shsegwit0 = b.bitcoin.address.fromOutputScript(scriptPubKey0);
+	*/	
+	
+	var wallet2 = root.derivePath("m/49'/0'/0'/0/"+0);
+	var wif2 = wallet2.keyPair.toWIF();
+	
+	//segwit p2sh
+	var pubKey = wallet2.keyPair.getPublicKeyBuffer();
+	var pubKeyHash = b.bitcoin.crypto.hash160(pubKey);
+	var redeemScript = b.bitcoin.script.witnessPubKeyHash.output.encode(pubKeyHash);
+	var redeemScriptHash = b.bitcoin.crypto.hash160(redeemScript);
+	var scriptPubKey2 = b.bitcoin.script.scriptHash.output.encode(redeemScriptHash);
+	var p2shsegwit = b.bitcoin.address.fromOutputScript(scriptPubKey2);
+	
+	console.log(p2shsegwit);
+	return p2shsegwit;
+}
+
+function backUp(){
+	var mnemonic = window.localStorage.getItem("seedwords");
+	console.log("This is your 12-word seed back-up. Save these words or you will lose your money. Begin seed words: "+mnemonic);
+}
+
+</script>
+</body>
+</html>
